@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vanilla 2D Sandbox Editor</title>
+    <title>Vanilla 2D Sandbox IDE</title>
     <style>
+        /* IDE Styles (Not the Game's CSS) */
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background-color: #1a1a1a;
@@ -12,59 +13,51 @@
             display: flex; flex-direction: column;
         }
 
-        /* Top Bar */
         #topBar {
             height: 40px; background: #2a2a2a;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 10px; border-bottom: 1px solid #3a3a3a;
         }
 
-        /* Main Workspace Layout */
-        #workspace {
-            display: flex; flex: 1; overflow: hidden;
-        }
+        #workspace { display: flex; flex: 1; overflow: hidden; }
 
-        /* Side Panels */
         .panel {
-            width: 250px; background: #222;
+            width: 280px; background: #222;
             border-right: 1px solid #3a3a3a; display: flex;
             flex-direction: column; padding: 10px; box-sizing: border-box;
+            overflow-y: auto;
         }
         #rightPanel { border-right: none; border-left: 1px solid #3a3a3a; }
         
-        .panel h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .panel h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px; color: #ccc;}
         .panel-section { margin-bottom: 15px; }
 
-        /* Center Area (Preview/Code) */
         #centerArea {
             flex: 1; display: flex; flex-direction: column;
-            background: black; position: relative;
+            background: #000; position: relative;
         }
 
-        /* Tabs */
         #tabs {
             height: 35px; display: flex; background: #2a2a2a;
             border-bottom: 1px solid #3a3a3a;
         }
         .tab {
-            padding: 0 20px; display: flex; align-items: center;
+            padding: 0 15px; display: flex; align-items: center;
             cursor: pointer; border-right: 1px solid #3a3a3a;
-            background: #2a2a2a; user-select: none;
+            background: #2a2a2a; user-select: none; font-size: 13px;
         }
         .tab.active { background: #333; font-weight: bold; }
-        #tab-preview.active { border-top: 3px solid #4a90e2; } /* Blue highlight for Preview */
-        #tab-code.active { border-top: 3px solid #d0021b; }    /* Red highlight for Code */
+        #tab-preview.active { border-top: 3px solid #4a90e2; }
+        #tab-js.active { border-top: 3px solid #f1e05a; }
+        #tab-html.active { border-top: 3px solid #e34c26; }
+        #tab-css.active { border-top: 3px solid #563d7c; }
 
-        /* Content Areas */
-        #canvasContainer, #codeContainer {
+        .editor-container {
             flex: 1; position: relative; overflow: hidden; display: none;
         }
-        #canvasContainer.active, #codeContainer.active { display: block; }
+        .editor-container.active { display: block; }
 
-        canvas { display: block; width: 100%; height: 100%; }
-
-        /* Code Editor Simulation */
-        #codeEditor {
+        textarea.code-editor {
             width: 100%; height: 100%; background: #1e1e1e;
             color: #d4d4d4; font-family: 'Consolas', 'Monaco', monospace;
             font-size: 14px; border: none; padding: 10px;
@@ -73,70 +66,116 @@
 
         /* Object Type List */
         .object-type-item {
-            display: flex; align-items: center; padding: 5px;
-            cursor: pointer; border-radius: 4px; margin-bottom: 2px;
+            display: flex; align-items: center; padding: 8px;
+            cursor: pointer; border-radius: 4px; margin-bottom: 4px;
+            background: #2a2a2a; border: 1px solid transparent;
         }
         .object-type-item:hover { background: #333; }
-        .object-type-item.selected { background: #444; border: 1px solid #666; }
+        .object-type-item.selected { background: #444; border-color: #666; }
         .object-type-icon {
-            width: 24px; height: 24px; border: 1px solid #555;
-            margin-right: 10px; background-size: cover;
+            width: 20px; height: 20px; border: 1px solid #555;
+            margin-right: 10px; background-color: #f0f; /* fallback */
         }
 
-        /* Properties Inputs */
-        .prop-group { margin-bottom: 8px; display: flex; align-items: center; }
-        .prop-group label { width: 80px; font-size: 13px; color: #aaa; }
+        /* Properties Form */
+        .prop-group { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .prop-group label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .prop-group input {
-            flex: 1; background: #333; border: 1px solid #444;
-            color: white; padding: 4px; border-radius: 3px;
+            background: #333; border: 1px solid #444;
+            color: white; padding: 6px; border-radius: 3px; font-family: monospace;
         }
+        
+        button {
+            background: #444; color: white; border: 1px solid #555;
+            padding: 6px 12px; cursor: pointer; border-radius: 3px;
+        }
+        button:hover { background: #555; }
+        .btn-primary { background: #4caf50; border-color: #388e3c; }
+        .btn-primary:hover { background: #43a047; }
+        .btn-danger { background: #d32f2f; border-color: #b71c1c; }
+
+        /* --- PREVIEW AREA OVERLAYS --- */
+        #game-preview-wrapper {
+            position: relative; width: 100%; height: 100%;
+        }
+        #gameCanvas {
+            display: block; width: 100%; height: 100%;
+        }
+        /* The UI created by the Dev for the Player will be injected here */
+        #player-ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* Let clicks pass through to canvas by default */
+        }
+        /* We'll inject player CSS inside the iframe or style tag */
 
     </style>
 </head>
 <body>
 
     <div id="topBar">
-        <span>Vanilla 2D Sandbox Editor</span>
+        <span>Vanilla 2D Sandbox IDE</span>
         <div>
-            <button id="btn-save">Salvar Jogo</button>
-            <button id="btn-run" style="background: #4caf50; color: white;">Rodar</button>
+            <button class="btn-primary" id="btn-run">▶ Rodar (F5)</button>
         </div>
     </div>
 
     <div id="workspace">
         
         <div id="leftPanel" class="panel">
-            <h3>Propriedades</h3>
-            <div id="no-selection" style="color: #888; font-style: italic;">Nenhum objeto selecionado</div>
-            <div id="properties-form" style="display: none;">
+            <h3>Editor de Tipo de Objeto</h3>
+            <div id="no-type-selection" style="color: #888; font-size: 13px; font-style: italic;">Selecione um tipo na lista à direita para editar.</div>
+            
+            <div id="type-editor-form" style="display: none;">
                 <div class="prop-group">
-                    <label>Tipo:</label>
-                    <span id="prop-type-name">Grama</span>
+                    <label>ID Interno (ex: block_grass)</label>
+                    <input type="text" id="type-id" readonly title="ID não pode ser alterado após criação">
                 </div>
                 <div class="prop-group">
-                    <label>Posição X:</label>
-                    <input type="number" id="prop-x">
+                    <label>Nome de Exibição</label>
+                    <input type="text" id="type-name">
                 </div>
                 <div class="prop-group">
-                    <label>Posição Y:</label>
-                    <input type="number" id="prop-y">
+                    <label>URL Textura Topo</label>
+                    <input type="text" id="type-tex-top" placeholder="assets/tex_top.png">
                 </div>
-                <button id="btn-delete-object" style="margin-top: 10px; background: #d32f2f; color: white; width: 100%;">Deletar Objeto</button>
+                <div class="prop-group">
+                    <label>URL Textura Esquerda</label>
+                    <input type="text" id="type-tex-left" placeholder="assets/tex_left.png">
+                </div>
+                <div class="prop-group">
+                    <label>URL Textura Direita</label>
+                    <input type="text" id="type-tex-right" placeholder="assets/tex_right.png">
+                </div>
+                <div style="display: flex; gap: 5px; margin-top: 15px;">
+                    <button id="btn-save-type" style="flex: 1;" class="btn-primary">Salvar Alterações</button>
+                </div>
+                <button id="btn-delete-type" style="margin-top: 10px; width: 100%;" class="btn-danger">Excluir Tipo</button>
             </div>
         </div>
 
         <div id="centerArea">
             <div id="tabs">
                 <div id="tab-preview" class="tab active">Preview</div>
-                <div id="tab-code" class="tab">Código</div>
+                <div id="tab-js" class="tab">game/main.js</div>
+                <div id="tab-html" class="tab">game/ui.html</div>
+                <div id="tab-css" class="tab">game/style.css</div>
             </div>
 
-            <div id="canvasContainer" class="active">
-                <canvas id="gameCanvas"></canvas>
+            <div id="previewContainer" class="editor-container active">
+                <div id="game-preview-wrapper">
+                    <canvas id="gameCanvas"></canvas>
+                    <div id="player-ui-layer"></div>
+                </div>
             </div>
 
-            <div id="codeContainer">
-                <textarea id="codeEditor" spellcheck="false"></textarea>
+            <div id="jsContainer" class="editor-container">
+                <textarea id="editor-js" class="code-editor" spellcheck="false"></textarea>
+            </div>
+            <div id="htmlContainer" class="editor-container">
+                <textarea id="editor-html" class="code-editor" spellcheck="false"></textarea>
+            </div>
+            <div id="cssContainer" class="editor-container">
+                <textarea id="editor-css" class="code-editor" spellcheck="false"></textarea>
             </div>
         </div>
 
@@ -145,196 +184,112 @@
                 <h3>Tipos de Objetos</h3>
                 <div id="object-type-list">
                     </div>
-                <button style="margin-top: 5px; width: 100%;">+ Novo Tipo</button>
-            </div>
-            
-            <div class="panel-section" style="border-top: 1px solid #444; padding-top: 10px;">
-                <h3>Arquivos do Jogo</h3>
-                <div style="font-size: 13px; color: #aaa; font-family: monospace;">
-                    <div>Raiz/</div>
-                    <div style="padding-left: 15px;">engine.js</div>
-                    <div style="padding-left: 15px;">index.html</div>
-                    <div style="padding-left: 15px; color: white; font-weight: bold;">game/</div>
-                    <div style="padding-left: 30px; color: #4a90e2;">main.js*</div>
-                    <div style="padding-left: 30px;">assets/</div>
-                    <div style="padding-left: 45px;">blocos/</div>
-                    <div style="padding-left: 60px; color: #8bc34a;">grass.png</div>
-                    <div style="padding-left: 60px; color: #795548;">dirt.png</div>
-                </div>
+                <button id="btn-new-type" style="margin-top: 10px; width: 100%;">+ Criar Novo Tipo</button>
             </div>
         </div>
     </div>
     
+    <style id="player-custom-styles"></style>
+
     <script src="engine.js"></script>
     
     <script>
         // Start of code segment generated by Google Gemini 3.1 Pro
 
-        // --- MOCK GAME CODE (This is what the dev would edit) ---
-        // Ordinarily, this would be loaded from a separate file.
-        const defaultGameCode = `
-// Game Setup
-game.config.gridMode = 'iso';
-game.config.gridSize = 64;
-
-// Define available block types
-game.defineObjectType('grama', {
-    name: 'Bloco de Grama',
-    textures: {
-        top: 'game/assets/blocos/grass_top.png', // We'll create these as colors for this demo
-        sides: 'game/assets/blocos/dirt_side.png'
-    }
-});
-
-game.defineObjectType('pedra', {
-    name: 'Bloco de Pedra',
-    textures: {
-        all: 'game/assets/blocos/stone.png'
-    }
-});
-
-game.defineObjectType('madeira', {
-    name: 'Tronco de Madeira',
-    textures: {
-        side: 'game/assets/blocos/wood_side.png',
-        top: 'game/assets/blocos/wood_top.png'
-    }
-});
-
-// Initial scene setup
-game.addObject('grama', 0, 0);
-game.addObject('grama', 1, 0);
-game.addObject('pedra', 0, 1);
-
-// Input Handling
-game.onMouseClick = (worldCoords) => {
-    // If an object is clicked, select it.
-    const clickedObj = game.getObjectAt(worldCoords.x, worldCoords.y);
-    if (clickedObj) {
-        editor.selectObject(clickedObj);
-        return; 
-    }
-
-    // Otherwise, place the currently selected TYPE from the palette
-    const selectedTypeId = editor.getSelectedType();
-    if (selectedTypeId) {
-        game.addObject(selectedTypeId, worldCoords.x, worldCoords.y);
-    }
-};
-
-game.onRightClick = (worldCoords) => {
-    game.removeObjectAt(worldCoords.x, worldCoords.y);
-    editor.clearSelection();
-};
-`;
-        // --- End of Mock Game Code ---
-
-        // Initialize Engine
-        const game = new SandboxEngine('gameCanvas');
-
-        // Simple Texture Creator helper for the demo (since we have no real asset files)
-        const createMockTexture = (color, name) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = color; ctx.fillRect(0, 0, 64, 64);
-            ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 2; ctx.strokeRect(0, 0, 64, 64);
+        // --- IDE STATE ---
+        const ide = {
+            selectedTypeId: null,
             
-            // For the demo, we'll store the color to use as an icon
-            return { img: canvas, color: color, path: 'game/assets/blocos/' + name + '.png' };
-        };
-
-        // Populate Mock Textures for the demo to run without files
-        const textures = {
-            grass_top: createMockTexture('#8bc34a', 'grass_top'),
-            dirt_side: createMockTexture('#795548', 'dirt_side'),
-            stone: createMockTexture('#9e9e9e', 'stone'),
-            wood_top: createMockTexture('#d7ccc8', 'wood_top'),
-            wood_side: createMockTexture('#a1887f', 'wood_side')
-        };
-
-        // Replace the default drawIsoCube with one that handles our mock texture objects
-        const originalDrawIsoCube = game.drawIsoCube.bind(game);
-        game.drawIsoCube = function(x, y, size, topTx, leftTx, rightTx) {
-            originalDrawIsoCube(x, y, size, topTx?.img, leftTx?.img, rightTx?.img);
-        };
-
-        // --- EDITOR LOGIC ---
-        const editor = {
-            selectedObject: null,
-            selectedTypeId: 'grama',
-            objectTypes: {},
-
-            init: function() {
-                // Set up Tabs
-                document.getElementById('tab-preview').addEventListener('click', () => this.setTab('preview'));
-                document.getElementById('tab-code').addEventListener('click', () => this.setTab('code'));
-
-                // Initialize Code Editor
-                const codeEditor = document.getElementById('codeEditor');
-                codeEditor.value = defaultGameCode.trim();
-
-                // Run the code initially
-                this.runCode();
-
-                document.getElementById('btn-run').addEventListener('click', () => this.runCode());
-
-                // Properties Panel Inputs
-                document.getElementById('prop-x').addEventListener('input', (e) => this.updateSelectedObject('x', e.target.value));
-                document.getElementById('prop-y').addEventListener('input', (e) => this.updateSelectedObject('y', e.target.value));
-                document.getElementById('btn-delete-object').addEventListener('click', () => this.deleteSelectedObject());
+            // This represents the internal database of block types the dev creates via the UI
+            objectTypes: {
+                'block_grass': { id: 'block_grass', name: 'Grama', texTop: '#8bc34a', texLeft: '#795548', texRight: '#5d4037' },
+                'block_stone': { id: 'block_stone', name: 'Pedra', texTop: '#9e9e9e', texLeft: '#757575', texRight: '#616161' }
             },
 
-            setTab: function(tabName) {
-                document.querySelectorAll('.tab, #centerArea > div:not(#tabs)').forEach(el => el.classList.remove('active'));
+            // Default Game Files (What the dev writes)
+            files: {
+                js: `
+// --- main.js ---
+// Get player UI elements
+const uiTitle = document.getElementById('ui-title');
+// Example of how the dev's code interacts with the engine:
+game.config.gridMode = 'iso';
+
+// Generate some initial world
+game.addObject('block_stone', 0, 0);
+game.addObject('block_grass', 0, 1);
+
+game.onMouseClick = (worldCoords) => {
+    // Logic for placing the currently active block from Player UI
+    // In a real scenario, this would read from a JS variable updated by the HTML UI clicks
+    game.addObject('block_grass', worldCoords.x, worldCoords.y);
+};
+                `.trim(),
+                html: `
+<div class="hotbar">
+    <div id="ui-title">Minha Hotbar</div>
+    <button class="slot" onclick="console.log('Grama selecionada')">G</button>
+    <button class="slot" onclick="console.log('Pedra selecionada')">P</button>
+</div>
+                `.trim(),
+                css: `
+/* --- style.css --- */
+/* Styling for the PLAYER's UI */
+.hotbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    gap: 5px;
+    pointer-events: auto; /* Required to make UI clickable over canvas */
+    border: 2px solid #555;
+}
+.hotbar #ui-title {
+    position: absolute; top: -25px; left: 0; color: white;
+}
+.slot {
+    width: 40px; height: 40px; background: #888;
+    border: 2px solid #aaa; cursor: pointer; color: white;
+}
+.slot:hover { border-color: #fff; }
+                `.trim()
+            },
+
+            init: function() {
+                // Setup Tabs
+                const tabs = ['preview', 'js', 'html', 'css'];
+                tabs.forEach(tab => {
+                    document.getElementById('tab-' + tab).addEventListener('click', () => this.switchTab(tab));
+                });
+
+                // Load initial code into textareas
+                document.getElementById('editor-js').value = this.files.js;
+                document.getElementById('editor-html').value = this.files.html;
+                document.getElementById('editor-css').value = this.files.css;
+
+                // Setup Run Button
+                document.getElementById('btn-run').addEventListener('click', () => this.runGame());
+
+                // Setup Type Editor Buttons
+                document.getElementById('btn-save-type').addEventListener('click', () => this.saveSelectedType());
+                document.getElementById('btn-delete-type').addEventListener('click', () => this.deleteSelectedType());
+                document.getElementById('btn-new-type').addEventListener('click', () => this.createNewType());
+
+                this.renderTypeList();
+                this.runGame(); // Initial run
+            },
+
+            switchTab: function(tabName) {
+                document.querySelectorAll('.tab, .editor-container').forEach(el => el.classList.remove('active'));
                 document.getElementById('tab-' + tabName).classList.add('active');
                 document.getElementById(tabName + 'Container').classList.add('active');
             },
 
-            runCode: function() {
-                const code = document.getElementById('codeEditor').value;
-                game.reset(); // Need to implement this in engine.js to clear state
-                this.objectTypes = {};
-                this.clearSelection();
-
-                try {
-                    // Inject a helper function for the game code to use
-                    game.defineObjectType = (id, def) => this.defineObjectType(id, def);
-                    
-                    // Simple eval for demo purposes. In a real app, use a safer method or sandbox.
-                    eval(code); 
-                    
-                    this.populateObjectTypeList();
-                    console.log("Código executado com sucesso.");
-                    this.setTab('preview');
-                } catch (e) {
-                    console.error("Erro ao executar o código do jogo:", e);
-                    alert("Erro no código. Verifique o console.");
-                }
-            },
-
-            defineObjectType: function(id, def) {
-                // In a real scenario, we'd load images from def.textures path.
-                // Here we map to our mock textures.
-                let top, sides;
-                
-                if (def.textures.all) {
-                    const tx = textures[def.textures.all.split('/').pop().split('.')[0]];
-                    top = sides = tx;
-                } else {
-                    top = textures[def.textures.top.split('/').pop().split('.')[0]];
-                    sides = textures[def.textures.sides.split('/').pop().split('.')[0]];
-                }
-
-                this.objectTypes[id] = {
-                    id: id,
-                    name: def.name,
-                    iconColor: top.color, // Use top texture color as icon
-                    render: (ctx, x, y, size) => game.drawIsoCube(x, y, size, top, sides, sides)
-                };
-            },
-
-            populateObjectTypeList: function() {
+            renderTypeList: function() {
                 const list = document.getElementById('object-type-list');
                 list.innerHTML = '';
                 for (const id in this.objectTypes) {
@@ -342,8 +297,9 @@ game.onRightClick = (worldCoords) => {
                     const item = document.createElement('div');
                     item.className = 'object-type-item' + (id === this.selectedTypeId ? ' selected' : '');
                     item.onclick = () => this.selectType(id);
+                    // Using Top Texture as color fallback for icon in IDE
                     item.innerHTML = `
-                        <div class="object-type-icon" style="background-color: ${type.iconColor}"></div>
+                        <div class="object-type-icon" style="background-color: ${type.texTop}"></div>
                         <span>${type.name}</span>
                     `;
                     list.appendChild(item);
@@ -352,105 +308,93 @@ game.onRightClick = (worldCoords) => {
 
             selectType: function(id) {
                 this.selectedTypeId = id;
-                this.populateObjectTypeList(); // Redraw to update selection state
-                this.clearSelection(); // Deselect any object when picking a new type to place
-            },
-
-            getSelectedType: function() { return this.selectedTypeId; },
-
-            // --- Selection / Properties Logic ---
-            selectObject: function(obj) {
-                this.selectedObject = obj;
-                document.getElementById('no-selection').style.display = 'none';
-                document.getElementById('properties-form').style.display = 'block';
+                this.renderTypeList();
                 
-                const type = this.objectTypes[obj.typeId];
-                document.getElementById('prop-type-name').innerText = type ? type.name : 'Desconhecido';
-                document.getElementById('prop-x').value = Math.round(obj.x);
-                document.getElementById('prop-y').value = Math.round(obj.y);
+                const type = this.objectTypes[id];
+                document.getElementById('no-type-selection').style.display = 'none';
+                document.getElementById('type-editor-form').style.display = 'block';
+                
+                document.getElementById('type-id').value = type.id;
+                document.getElementById('type-name').value = type.name;
+                document.getElementById('type-tex-top').value = type.texTop;
+                document.getElementById('type-tex-left').value = type.texLeft;
+                document.getElementById('type-tex-right').value = type.texRight;
             },
 
-            clearSelection: function() {
-                this.selectedObject = null;
-                document.getElementById('no-selection').style.display = 'block';
-                document.getElementById('properties-form').style.display = 'none';
-                game.setSelectionHighlight(null); // implement in engine.js
+            saveSelectedType: function() {
+                if (!this.selectedTypeId) return;
+                const type = this.objectTypes[this.selectedTypeId];
+                type.name = document.getElementById('type-name').value;
+                type.texTop = document.getElementById('type-tex-top').value;
+                type.texLeft = document.getElementById('type-tex-left').value;
+                type.texRight = document.getElementById('type-tex-right').value;
+                this.renderTypeList();
             },
 
-            updateSelectedObject: function(prop, value) {
-                if (this.selectedObject) {
-                    this.selectedObject[prop] = parseFloat(value);
-                    game.requestSort(); // implement in engine.js to keep sorting correct
+            createNewType: function() {
+                const newId = 'block_' + Date.now();
+                this.objectTypes[newId] = {
+                    id: newId, name: 'Novo Bloco', texTop: '#fff', texLeft: '#ccc', texRight: '#999'
+                };
+                this.renderTypeList();
+                this.selectType(newId);
+            },
+
+            deleteSelectedType: function() {
+                if (!this.selectedTypeId) return;
+                if(confirm("Tem certeza que deseja deletar o tipo: " + this.objectTypes[this.selectedTypeId].name + "?")) {
+                    delete this.objectTypes[this.selectedTypeId];
+                    this.selectedTypeId = null;
+                    document.getElementById('no-type-selection').style.display = 'block';
+                    document.getElementById('type-editor-form').style.display = 'none';
+                    this.renderTypeList();
                 }
             },
-            
-            deleteSelectedObject: function() {
-                if(this.selectedObject) {
-                    game.removeObject(this.selectedObject);
-                    this.clearSelection();
+
+            // --- The core method that runs the dev's game ---
+            runGame: function() {
+                // 1. Fetch current code from textareas
+                const jsCode = document.getElementById('editor-js').value;
+                const htmlCode = document.getElementById('editor-html').value;
+                const cssCode = document.getElementById('editor-css').value;
+
+                // 2. Inject Dev's HTML into the Player UI Layer
+                const uiLayer = document.getElementById('player-ui-layer');
+                uiLayer.innerHTML = htmlCode;
+
+                // 3. Inject Dev's CSS
+                const styleTag = document.getElementById('player-custom-styles');
+                styleTag.innerHTML = cssCode;
+
+                // 4. Reset and configure Engine based on IDE's Object Types
+                if(typeof game !== 'undefined') {
+                    game.reset(); // Assuming reset clears the map
+                    // Here we would pass the IDE's object types to the engine
+                    // For the mock, we pretend the engine understands these texture colors
+                    game.registeredTypes = this.objectTypes; 
+                }
+
+                // 5. Execute Dev's JS
+                try {
+                    // Note: In a real production IDE, consider using an <iframe> or Web Workers 
+                    // for security to sandbox the eval code.
+                    const runContext = new Function(jsCode);
+                    runContext();
+                    
+                    console.log("Jogo compilado e rodando com sucesso.");
+                    this.switchTab('preview');
+                } catch (e) {
+                    console.error("Erro no script do jogo:", e);
+                    alert("Erro no código main.js. Verifique o console.");
                 }
             }
         };
 
-        editor.init();
-
-        // --- ENGINE EXTENSIONS (Required for the editor to work) ---
-        // We add these methods to the existing SandboxEngine class from your engine.js file.
-
-        // Clear all objects, input handlers, and configurations.
-        SandboxEngine.prototype.reset = function() {
-            this.objects = [];
-            this.config = { gridMode: 'free', gridSize: 64 };
-            this.onMouseClick = null;
-            this.onRightClick = null;
-            this.selectedObjectForHighlight = null;
-        };
+        // Assume game is instantiated from engine.js globally
+        // const game = new SandboxEngine('gameCanvas');
         
-        // Add object by type ID
-        SandboxEngine.prototype.addObject = function(typeId, worldX, worldY) {
-            const type = editor.objectTypes[typeId];
-            if (!type) return;
-
-            const newObj = {
-                typeId: typeId,
-                x: worldX, y: worldY,
-                render: function(ctx, engine) {
-                    type.render(ctx, this.x, this.y, engine.config.gridSize);
-                    // Draw selection highlight if this object is selected
-                    if(this === engine.selectedObjectForHighlight) {
-                        ctx.strokeStyle = '#4a90e2'; ctx.lineWidth = 3;
-                        // Rough hexagonal outline for highlight
-                        ctx.beginPath();
-                        ctx.moveTo(0, -engine.config.gridSize);
-                        ctx.lineTo(engine.config.gridSize * 0.866, -engine.config.gridSize/2);
-                        // ... complete the hexagon outline ... (skipped for brevity)
-                        ctx.closePath(); ctx.stroke();
-                    }
-                }
-            };
-            this.objects.push(newObj);
-            this.requestSort();
-        };
-
-        // Helper to find object at coordinates
-        SandboxEngine.prototype.getObjectAt = function(x, y) {
-            const size = this.config.gridSize / 2;
-            // Iterate backwards (top-most objects first)
-            for (let i = this.objects.length - 1; i >= 0; i--) {
-                const obj = this.objects[i];
-                if (Math.abs(obj.x - x) < size && Math.abs(obj.y - y) < size) {
-                    return obj;
-                }
-            }
-            return null;
-        };
-
-        SandboxEngine.prototype.removeObject = function(obj) {
-            this.objects = this.objects.filter(o => o !== obj);
-        };
-        
-        SandboxEngine.prototype.setSelectionHighlight = function(obj) { this.selectedObjectForHighlight = obj; };
-        SandboxEngine.prototype.requestSort = function() { this.objects.sort((a, b) => a.y - b.y); };
+        // Initialize the IDE
+        window.onload = () => ide.init();
 
         // End of code segment generated by Google Gemini 3.1 Pro
     </script>
