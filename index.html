@@ -366,20 +366,29 @@ game.onMouseClick = (worldCoords) => {
                 const styleTag = document.getElementById('player-custom-styles');
                 styleTag.innerHTML = cssCode;
 
-                // 4. Reset and configure Engine based on IDE's Object Types
-                if(typeof game !== 'undefined') {
-                    game.reset(); // Assuming reset clears the map
-                    // Here we would pass the IDE's object types to the engine
-                    // For the mock, we pretend the engine understands these texture colors
-                    game.registeredTypes = this.objectTypes; 
+                // 4. Ensure Engine is instantiated and reset
+                if (!window.gameEngineInstance) {
+                    // Instantiate the engine only once and store it globally
+                    window.gameEngineInstance = new SandboxEngine('gameCanvas');
                 }
+                
+                // Clear the map if the reset method exists, otherwise do a manual fallback clear
+                if (typeof window.gameEngineInstance.reset === 'function') {
+                    window.gameEngineInstance.reset();
+                } else {
+                    window.gameEngineInstance.objects = []; 
+                }
+                
+                // Pass the IDE's block types to the engine
+                window.gameEngineInstance.registeredTypes = this.objectTypes; 
 
                 // 5. Execute Dev's JS
                 try {
-                    // Note: In a real production IDE, consider using an <iframe> or Web Workers 
-                    // for security to sandbox the eval code.
-                    const runContext = new Function(jsCode);
-                    runContext();
+                    // Create a function that accepts 'game' as a parameter
+                    const runContext = new Function('game', jsCode);
+                    
+                    // Execute the code, injecting our engine instance as the 'game' variable
+                    runContext(window.gameEngineInstance);
                     
                     console.log("Jogo compilado e rodando com sucesso.");
                     this.switchTab('preview');
